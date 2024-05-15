@@ -6,16 +6,18 @@ import clsx from "clsx";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { IoInformationOutline } from "react-icons/io5";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 
 export const LoginForm = () => {
     // El state tiene los valores que retorne la acción de login
     const [state, dispatch] = useFormState(authenticate, undefined);
-    const router = useRouter();
+    // const router = useRouter();
 
     useEffect(() => {
         if (state === "Success") {
-            router.replace("/");
+            // router.replace("/");
+            // router.push("/");
+            window.location.replace("/");
         }
     }, [state]);
 
