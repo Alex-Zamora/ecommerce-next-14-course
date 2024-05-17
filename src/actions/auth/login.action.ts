@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn } from "@/auth.config";
+import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
 // import { sleep } from "@/utils";
 
@@ -29,3 +29,18 @@ export async function authenticate(
         throw error;
     }
 }
+
+export const login = async (email: string, password: string) => {
+    try {
+        await signIn("credentials", { email, password });
+        return {
+            ok: true,
+        };
+    } catch (error) {
+        console.log(error);
+        return {
+            ok: false,
+            message: "No se pudo iniciar sesión",
+        };
+    }
+};

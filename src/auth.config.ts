@@ -1,16 +1,42 @@
-import NextAuth, { type NextAuthConfig } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { z } from "zod";
-import bcryptjs from "bcryptjs";
-import prisma from "./lib/prisma";
+import { NextAuthConfig } from "next-auth";
+import { NextResponse } from "next/server";
 
-export const authConfig: NextAuthConfig = {
+const protectedRoutes = [
+    "/checkout/address",
+    "/products",
+    "/users",
+    "/profile",
+    "/orders",
+];
+
+const authRoutes = ["/auth/login", "/auth/register"];
+
+export const authConfig = {
     pages: {
         signIn: "/auth/login",
         newUser: "/auth/new-account",
     },
-
     callbacks: {
+        authorized({ auth, request: { nextUrl } }) {
+            const isProtectedRoute = protectedRoutes.includes(nextUrl.pathname);
+            const isAuthRoute = authRoutes.includes(nextUrl.pathname);
+            const isLoggedIn = !!auth?.user;
+
+            if (isAuthRoute && isLoggedIn) {
+                return Response.redirect(new URL("/", nextUrl));
+            }
+
+            if (isProtectedRoute) {
+                if (isLoggedIn) {
+                    return true;
+                }
+                return Response.redirect(
+                    new URL(`/auth/login?origin=${nextUrl.pathname}`, nextUrl)
+                );
+            }
+
+            return true;
+        },
         jwt({ token, user }) {
             // console.log({ token, user });
 
@@ -21,40 +47,10 @@ export const authConfig: NextAuthConfig = {
             return token;
         },
         session({ session, token, user }) {
+            // aqui se puede hacer una consulta a la base de datos
+            // para actualizar información del usuario, ejemplo cambiar de admin a user
             session.user = token.data as any;
             return session;
         },
     },
-
-    providers: [
-        Credentials({
-            async authorize(credentials) {
-                const parsedCredentials = z
-                    .object({
-                        email: z.string().email(),
-                        password: z.string().min(6),
-                    })
-                    .safeParse(credentials);
-
-                if (!parsedCredentials.success) return null;
-
-                const { email, password } = parsedCredentials.data;
-
-                //Buscar correo
-                const user = await prisma.user.findUnique({
-                    where: { email: email.toLowerCase() },
-                });
-
-                if (!user || !bcryptjs.compareSync(password, user.password)) {
-                    return null;
-                }
-
-                const { password: _, ...rest } = user;
-
-                return rest;
-            },
-        }),
-    ],
-};
-
-export const { signIn, signOut, auth, handlers } = NextAuth(authConfig);
+} satisfies Omit<NextAuthConfig, "providers">;
